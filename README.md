@@ -1,0 +1,1 @@
+React component → Axios → Express route → Middleware → Controller → PostgreSQL → Controller response → React state → UI.
