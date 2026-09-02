@@ -1,0 +1,133 @@
+@import "shadcn/tailwind.css";
+@import "@fontsource-variable/figtree";
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 248 250 252;
+    --foreground: 15 23 42;
+
+    --primary: 37 99 235;
+    --primary-dark: 29 78 216;
+
+    --surface: 255 255 255;
+    --border: 226 232 240;
+
+    --muted: 100 116 139;
+
+    --success: 22 163 74;
+    --danger: 220 38 38;
+
+    --radius: 0.75rem;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-slate-50 text-slate-900 antialiased;
+    font-family: "Figtree Variable", sans-serif;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    @apply font-semibold tracking-tight;
+  }
+}
+
+@layer components {
+  /* ---------- BUTTONS ---------- */
+
+  .btn {
+    @apply inline-flex items-center justify-center gap-2
+      rounded-lg px-4 py-2.5
+      text-sm font-semibold
+      transition-all duration-200
+      disabled:pointer-events-none
+      disabled:opacity-50;
+  }
+
+  .btn-primary {
+    @apply btn bg-blue-600 text-white
+      shadow-sm
+      hover:bg-blue-700
+      hover:shadow-md
+      active:scale-[0.98];
+  }
+
+  .btn-outline {
+    @apply btn border border-slate-300
+      bg-white text-slate-700
+      hover:border-blue-500
+      hover:bg-blue-50
+      hover:text-blue-600;
+  }
+
+  .btn-danger {
+    @apply btn border border-red-200
+      bg-white text-red-600
+      hover:bg-red-50;
+  }
+
+  /* ---------- CARDS ---------- */
+
+  .card {
+    @apply rounded-2xl border border-slate-200
+      bg-white
+      shadow-sm
+      transition-all duration-300;
+  }
+
+  .card-hover {
+    @apply hover:-translate-y-1
+      hover:border-blue-200
+      hover:shadow-xl;
+  }
+
+  /* ---------- INPUT ---------- */
+
+  .input {
+    @apply w-full rounded-lg
+      border border-slate-300
+      bg-white px-3.5 py-2.5
+      text-sm text-slate-900
+      outline-none
+      transition-all
+      placeholder:text-slate-400
+      focus:border-blue-500
+      focus:ring-4
+      focus:ring-blue-500/10;
+  }
+
+  .label {
+    @apply mb-1.5 block
+      text-sm font-medium
+      text-slate-700;
+  }
+
+  /* ---------- BADGES ---------- */
+
+  .badge {
+    @apply inline-flex items-center
+      rounded-full px-2.5 py-1
+      text-xs font-semibold;
+  }
+
+  .badge-success {
+    @apply badge bg-green-100 text-green-700;
+  }
+
+  .badge-danger {
+    @apply badge bg-red-100 text-red-700;
+  }
+
+  .badge-warning {
+    @apply badge bg-amber-100 text-amber-700;
+  }
+}
