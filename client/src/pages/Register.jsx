@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext.jsx";
+import { Button } from "@base-ui/react";
 
 const Register = () => {
   const { register } = useAuth();
@@ -64,9 +65,9 @@ const Register = () => {
 
         {error && <p className="text-sm text-red-600">{error}</p>}
 
-        <button type="submit" disabled={submitting} className="btn-primary w-full">
+        <Button type="submit" disabled={submitting} className="btn-primary w-full">
           {submitting ? "Creating account..." : "Sign up"}
-        </button>
+        </Button>
       </form>
 
       <p className="mt-6 text-sm text-muted">

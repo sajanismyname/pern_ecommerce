@@ -1,12 +1,15 @@
 import { useEffect, useState } from "react";
 import api from "../api/axios.js";
 import ProductCard from "../components/ProductCard.jsx";
+import { useAuth } from "@/context/AuthContext.jsx";
 
 const Home = () => {
   const [products, setProducts] = useState([]);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+
+  const {isAdmin}=useAuth()
 
   useEffect(() => {
     const timeout = setTimeout(() => {
@@ -45,7 +48,11 @@ const Home = () => {
       ) : (
         <div className="grid grid-cols-2 gap-5 sm:grid-cols-3 lg:grid-cols-4">
           {products.map((product) => (
-            <ProductCard key={product.id} product={product} />
+            <ProductCard
+              key={product.id}
+              product={product}
+              isAdmin={isAdmin}
+            />
           ))}
         </div>
       )}

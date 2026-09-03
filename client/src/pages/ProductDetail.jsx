@@ -53,7 +53,7 @@ const ProductDetail = () => {
         {product.category && <p className="mb-2 text-sm text-muted">{product.category}</p>}
         <h1 className="mb-3 text-2xl font-800 text-ink">{product.name}</h1>
         <p className="mb-5 text-2xl font-semibold text-primary">
-          ${Number(product.price).toFixed(2)}
+          Rs{Number(product.price).toFixed(2)}
         </p>
         <p className="mb-6 leading-relaxed text-muted">
           {product.description || "No description available for this product."}

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import api from "../api/axios.js";
+import { Button } from "@base-ui/react";
 
 const AdminDashboard = () => {
   const [products, setProducts] = useState([]);
@@ -73,12 +74,12 @@ const AdminDashboard = () => {
                       >
                         Edit
                       </Link>
-                      <button
+                      <Button
                         onClick={() => handleDelete(product.id)}
                         className="text-red-500 hover:underline"
                       >
                         Delete
-                      </button>
+                      </Button>
                     </div>
                   </td>
                 </tr>
