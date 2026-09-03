@@ -34,6 +34,14 @@ export const AuthProvider = ({ children }) => {
     return res.data.user;
   };
 
+  /**
+   * Updates the current user's profile information.
+   *
+   * @param {Object} data - The profile data to update
+   * @param {string} data.name - Updated user name
+   * @param {string} data.email - Updated user email
+   * @returns {Promise<Object>} The updated user object
+   */
   const updateUser = async (data) => {
     const res = await api.patch("/auth/profile", data);
 

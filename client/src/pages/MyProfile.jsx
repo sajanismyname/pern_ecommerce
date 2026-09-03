@@ -5,6 +5,12 @@ import { Button } from "../components/ui/button";
 import {updateProfileSchema} from "../validation/authSchema";
 import { useState } from "react";
 
+/**
+ * MyProfile component - displays and allows editing of user profile information.
+ * Provides functionality to view account details, edit name and email, and logout.
+ *
+ * @returns {JSX.Element} The profile page component with editable user information
+ */
 const MyProfile = () => {
     const { user, logout, isAdmin, updateUser } = useAuth()
     const navigate = useNavigate()
@@ -19,6 +25,12 @@ const MyProfile = () => {
     const [error, setError] = useState("")
     const [saving, setSaving] = useState(false)
 
+    /**
+     * Creates a change handler for form field updates.
+     *
+     * @param {string} field - The form field name to update
+     * @returns {Function} Event handler that updates the specified form field
+     */
     const handleChange = (field) => (e) => {
         setForm({
             ...form,
@@ -26,6 +38,9 @@ const MyProfile = () => {
         })
     }
 
+    /**
+     * Enables edit mode and resets the form to current user values.
+     */
     const handleEdit = () => {
         setForm({
             name: user?.name || "",
@@ -36,6 +51,9 @@ const MyProfile = () => {
         setEditing(true)
     }
 
+    /**
+     * Cancels edit mode and resets the form to current user values.
+     */
     const handleCancel = () => {
         setForm({
             name: user?.name || "",
@@ -46,6 +64,12 @@ const MyProfile = () => {
         setEditing(false)
     }
 
+    /**
+     * Handles profile update form submission.
+     * Validates form data, submits to API, and updates user context on success.
+     *
+     * @param {Event} e - The form submit event
+     */
     const handleSubmit = async (e) => {
         e.preventDefault()
 
@@ -75,6 +99,9 @@ const MyProfile = () => {
 
     }
 
+    /**
+     * Logs out the user and redirects to the login page.
+     */
     const handleLogout = () => {
         logout()
         navigate("/login")

@@ -1,6 +1,10 @@
 
 import { z } from "zod";
 
+/**
+ * Validation schema for user registration.
+ * Requires name (2+ chars), Gmail email, and strong password (8+ chars with uppercase, lowercase, number, and special character).
+ */
 export const registerSchema = z.object({
     name: z
         .string()
@@ -35,6 +39,10 @@ export const registerSchema = z.object({
         ),
 });
 
+/**
+ * Validation schema for user login.
+ * Requires valid email and password (minimum 8 characters).
+ */
 export const loginSchema = z.object({
     email: z
         .string()
@@ -46,6 +54,10 @@ export const loginSchema = z.object({
         .min(8, "Password is required"),
 });
 
+/**
+ * Validation schema for profile updates.
+ * Requires name (2-50 chars) and Gmail email address.
+ */
 export const updateProfileSchema = z.object({
     name: z
         .string()

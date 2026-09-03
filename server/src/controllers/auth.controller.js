@@ -80,6 +80,18 @@ export const getMe = async (req, res) => {
   }
 };
 
+/**
+ * Updates the authenticated user's profile information.
+ *
+ * @param {Object} req - Express request object
+ * @param {Object} req.body - Request body containing update data
+ * @param {string} req.body.name - Updated user name
+ * @param {string} req.body.email - Updated user email
+ * @param {Object} req.user - Authenticated user from JWT middleware
+ * @param {number} req.user.id - User ID from authentication token
+ * @param {Object} res - Express response object
+ * @returns {Promise<void>} JSON response with updated user data or error message
+ */
 export const updateProfile= async(req,res)=>{
   try {
     const {name,email}=req.body
