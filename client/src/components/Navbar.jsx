@@ -2,6 +2,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext.jsx";
 import { useCart } from "../context/CartContext.jsx";
 import { Button } from "@/components/ui/button";
+import { User } from "lucide-react";
 
 const Navbar = () => {
   const { user, logout, isAdmin } = useAuth();
@@ -46,7 +47,15 @@ const Navbar = () => {
 
           {user ? (
             <div className="flex items-center gap-3">
-              <span className="text-muted">Hi, {user.name.split(" ")[0]}</span>
+
+                <Link
+                  to="/profile"
+                  className="flex items-center gap-2"
+                >
+                  <User size={18} />
+                  Profile
+                </Link>
+
               <Button
                 variant="outline"
                 onClick={handleLogout}

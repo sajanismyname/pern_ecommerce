@@ -79,3 +79,26 @@ export const getMe = async (req, res) => {
     res.status(500).json({ message: "Something went wrong." });
   }
 };
+
+export const updateProfile= async(req,res)=>{
+  try {
+    const {name,email}=req.body
+    const result = await pool.query(
+      `UPDATE users 
+      SET name =$1, email=$2 
+      WHERE id = $3
+      RETURNING name, email, id ,role, created_at`,
+      [name, email, req.user.id]
+    )
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: "User not found." });
+    }
+
+
+    res.json({user: result.rows[0]})
+  } catch (error) {
+    console.error(error)
+    res.status(500).json({message: "Something went wrong"})
+  }
+}
