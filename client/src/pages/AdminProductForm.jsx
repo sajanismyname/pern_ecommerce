@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import api from "../api/axios.js";
-
+import { Button } from "@base-ui/react";
 const emptyForm = {
   name: "",
   description: "",
@@ -130,9 +130,9 @@ const AdminProductForm = () => {
         {error && <p className="text-sm text-red-600">{error}</p>}
 
         <div className="flex gap-3 pt-2">
-          <button type="submit" disabled={submitting} className="btn-primary">
+          <Button type="submit" disabled={submitting} className="btn-primary">
             {submitting ? "Saving..." : isEditing ? "Save changes" : "Create product"}
-          </button>
+          </Button>
           <button type="button" onClick={() => navigate("/admin")} className="btn-outline">
             Cancel
           </button>

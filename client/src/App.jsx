@@ -9,6 +9,7 @@ import ProductDetail from "./pages/ProductDetail.jsx";
 import Cart from "./pages/Cart.jsx";
 import AdminDashboard from "./pages/AdminDashboard.jsx";
 import AdminProductForm from "./pages/AdminProductForm.jsx";
+import MyProfile from "./pages/MyProfile.jsx";
 
 function App() {
   return (
@@ -53,6 +54,14 @@ function App() {
             </AdminRoute>
           }
         />
+
+        <Route
+          path="/profile" 
+          element={
+            <MyProfile />
+            }
+        />
+
       </Routes>
     </div>
   );

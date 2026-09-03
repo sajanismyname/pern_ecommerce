@@ -35,7 +35,7 @@ const Cart = () => {
             />
             <div className="flex-1">
               <p className="font-medium text-ink">{item.name}</p>
-              <p className="text-sm text-muted">${Number(item.price).toFixed(2)} each</p>
+              <p className="text-sm text-muted">Rs{Number(item.price).toFixed(2)} each</p>
             </div>
             <input
               type="number"
@@ -46,7 +46,7 @@ const Cart = () => {
               className="input w-16 text-center"
             />
             <p className="w-20 text-right font-semibold text-ink">
-              ${(Number(item.price) * item.quantity).toFixed(2)}
+              Rs{(Number(item.price) * item.quantity).toFixed(2)}
             </p>
             <button
               onClick={() => removeItem(item.id)}
@@ -59,7 +59,7 @@ const Cart = () => {
       </div>
 
       <div className="mt-6 flex items-center justify-between border-t border-border pt-6">
-        <span className="text-lg font-semibold text-ink">Total: ${total.toFixed(2)}</span>
+        <span className="text-lg font-semibold text-ink">Total: Rs{total.toFixed(2)}</span>
         <button className="btn-primary">Proceed to checkout</button>
       </div>
     </div>

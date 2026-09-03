@@ -1,6 +1,7 @@
 import { Link, useNavigate } from "react-router-dom";
 import { ShoppingCart, Star } from "lucide-react";
-
+import { useAuth } from "@/context/AuthContext";
+import { Button } from "@base-ui/react";
 
 const FALLBACK_IMAGE =
   "https://placehold.co/400x400/F6F7FB/223A6B?text=No+Image";
@@ -9,7 +10,7 @@ const ProductCard = ({ product, onAddToCart }) => {
   const outOfStock = product.stock <= 0;
   const lowStock = product.stock > 0 && product.stock <= 5;
   const navigate=useNavigate();
-  
+  const {isAdmin}=useAuth()
   return (
     <div className="card card-hover group overflow-hidden">
 
@@ -40,8 +41,8 @@ const ProductCard = ({ product, onAddToCart }) => {
           )}
 
           {/* QUICK ACTION */}
-          {!outOfStock && (
-            <button
+          {!outOfStock && !isAdmin &&(
+            <Button
               onClick={(e) => {
                 e.preventDefault();
                 onAddToCart?.(product);
@@ -60,8 +61,9 @@ const ProductCard = ({ product, onAddToCart }) => {
               "
             >
               <ShoppingCart size={18} />
-            </button>
+            </Button>
           )}
+          
         </div>
       </Link>
 

@@ -34,6 +34,14 @@ export const AuthProvider = ({ children }) => {
     return res.data.user;
   };
 
+  const updateUser = async (data) => {
+    const res = await api.patch("/auth/profile", data);
+
+    setUser(res.data.user);
+
+    return res.data.user;
+  };
+
   const logout = () => {
     localStorage.removeItem("token");
     setUser(null);
@@ -42,7 +50,7 @@ export const AuthProvider = ({ children }) => {
   const isAdmin = user?.role === "admin";
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout, isAdmin }}>
+    <AuthContext.Provider value={{ user, loading, login, register, updateUser, logout, isAdmin }}>
       {children}
     </AuthContext.Provider>
   );
