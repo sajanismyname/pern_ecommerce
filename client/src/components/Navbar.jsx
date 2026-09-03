@@ -35,10 +35,11 @@ const Navbar = () => {
           )}
 
           {user && !isAdmin && (
-            <Link to="/cart" className="relative hover:text-primary">
+              <Link to="/cart" className="relative inline-block px-1 hover:text-primary">
               Cart
+
               {cartCount > 0 && (
-                <span className="absolute -right-3 -top-2 rounded-full bg-accent px-1.5 py-0.5 text-[10px] font-semibold text-white">
+                <span className="absolute -right-4 -top-3 flex h-5 min-w-5 items-center justify-center rounded-full bg-accent px-1 text-[10px] font-semibold leading-none text-white">
                   {cartCount}
                 </span>
               )}

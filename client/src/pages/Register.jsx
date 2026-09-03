@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext.jsx";
 import { Button } from "@base-ui/react";
+import PasswordInput from "@/components/PasswordInput.jsx";
 
 const Register = () => {
   const { register } = useAuth();
@@ -53,8 +54,7 @@ const Register = () => {
         </div>
         <div>
           <label className="label">Password</label>
-          <input
-            type="password"
+          <PasswordInput
             required
             minLength={6}
             className="input"

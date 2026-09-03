@@ -10,6 +10,8 @@ import Cart from "./pages/Cart.jsx";
 import AdminDashboard from "./pages/AdminDashboard.jsx";
 import AdminProductForm from "./pages/AdminProductForm.jsx";
 import MyProfile from "./pages/MyProfile.jsx";
+import Checkout from "./pages/Checkout";
+import PaymentSuccess from "./pages/PaymentSuccess";
 
 function App() {
   return (
@@ -59,6 +61,20 @@ function App() {
           path="/profile" 
           element={
             <MyProfile />
+            }
+        />
+
+        <Route
+          path="/checkout" 
+          element={
+            <Checkout />
+            }
+        />
+
+        <Route
+          path="/payment-success" 
+          element={
+            <PaymentSuccess />
             }
         />
 
