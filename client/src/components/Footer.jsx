@@ -86,8 +86,16 @@ const Footer = () => {
                 </div>
 
                 <div className="flex items-start gap-2">
-                    <MapPin className="mt-0.5 h-4 w-4 shrink-0" />
-                    <span>Nepal</span>
+                    
+                <a
+                    href="https://www.google.com/maps/place/Nepal/@27.654553,82.9186939,6.96z/data=!4m6!3m5!1s0x3995e8c77d2e68cf:0x34a29abcd0cc86de!8m2!3d28.394857!4d84.124008!16zL20vMDE2end0?entry=ttu"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2"
+                    >
+                    <MapPin className="h-4 w-4 shrink-0" />
+                    Nepal
+                </a>
                 </div>
 
                 </div>
