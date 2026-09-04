@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext.jsx";
 import PasswordInput from "@/components/PasswordInput.jsx";
@@ -9,6 +9,10 @@ const Login = () => {
   const [form, setForm] = useState({ email: "", password: "" });
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+            window.scrollTo(0, 0);
+        }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();

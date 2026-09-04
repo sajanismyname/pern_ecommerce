@@ -1,11 +1,16 @@
 import { Link } from "react-router-dom";
 import { useCart } from "../context/CartContext.jsx";
+import { useEffect } from "react";
 
 const FALLBACK_IMAGE =
   "https://placehold.co/100x100/F6F7FB/223A6B?text=Item";
 
 const Cart = () => {
   const { items, total, loading, updateQuantity, removeItem } = useCart();
+
+  useEffect(() => {
+            window.scrollTo(0, 0);
+        }, []);
 
   // Loading state
   if (loading) {
