@@ -1,7 +1,7 @@
 import { pool } from "./db.js";
 
 export const initializeDatabase = async () => {
-  // create enum
+  // Create enum
   await pool.query(`
     DO $$
     BEGIN
@@ -14,7 +14,7 @@ export const initializeDatabase = async () => {
     $$;
   `);
 
-  // users
+  // Users
   await pool.query(`
     CREATE TABLE IF NOT EXISTS users (
       id SERIAL PRIMARY KEY,
@@ -26,7 +26,7 @@ export const initializeDatabase = async () => {
     );
   `);
 
-  // products
+  // Products
   await pool.query(`
     CREATE TABLE IF NOT EXISTS products (
       id SERIAL PRIMARY KEY,
@@ -42,7 +42,7 @@ export const initializeDatabase = async () => {
     );
   `);
 
-  // cart_items
+  // Cart items
   await pool.query(`
     CREATE TABLE IF NOT EXISTS cart_items (
       id SERIAL PRIMARY KEY,
@@ -51,6 +51,30 @@ export const initializeDatabase = async () => {
       quantity INTEGER NOT NULL DEFAULT 1 CHECK (quantity > 0),
       created_at TIMESTAMP NOT NULL DEFAULT NOW(),
       UNIQUE (user_id, product_id)
+    );
+  `);
+
+  // Orders
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS orders (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      total NUMERIC(10, 2) NOT NULL,
+      payment_method VARCHAR(50) NOT NULL,
+      payment_status VARCHAR(30) NOT NULL DEFAULT 'paid',
+      order_status VARCHAR(30) NOT NULL DEFAULT 'pending',
+      created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+  `);
+
+  // Order items
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS order_items (
+      id SERIAL PRIMARY KEY,
+      order_id INTEGER NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
+      product_id INTEGER NOT NULL REFERENCES products(id),
+      quantity INTEGER NOT NULL,
+      price NUMERIC(10, 2) NOT NULL
     );
   `);
 
