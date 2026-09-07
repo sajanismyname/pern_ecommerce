@@ -36,11 +36,7 @@
         <aside className="sticky top-0 flex h-screen w-64 shrink-0 flex-col px-3 py-4">
 
         {/* Logo */}
-        <div className="mb-6 px-3">
-            <span className="text-xl font-bold text-ink">
-            PERN<span className="text-accent">ECOM</span>
-            </span>
-        </div>
+        
 
         {/* Navigation */}
         <nav className="flex flex-1 flex-col gap-1">

@@ -17,7 +17,7 @@ const Navbar = () => {
         {/* Logo */}
         <Link
           to="/"
-          className="font-display text-xl font-800 text-ink"
+          className="font-display text-xl font-800 font-bold text-ink"
         >
           PERN<span className="text-accent">ECOM</span>
         </Link>
