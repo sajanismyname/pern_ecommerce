@@ -17,7 +17,7 @@ const Navbar = () => {
         {/* Logo */}
         <Link
           to="/"
-          className="font-display text-xl font-800 text-ink"
+          className="font-display text-xl font-800 font-bold text-ink"
         >
           PERN<span className="text-accent">ECOM</span>
         </Link>
@@ -26,13 +26,20 @@ const Navbar = () => {
 
           {/* Admin */}
           {isAdmin && (
-            <Link
-              to="/admin"
-              className="hover:text-primary"
+            <p
+              className="hover:text-primary font-bold"
             >
               Admin
-            </Link>
-          )}
+            </p>
+          ) }
+
+          {!isAdmin && (
+            <p
+              className="hover:text-primary font-bold"
+            >
+              User
+            </p>
+          ) }
 
           {/* Profile */}
           {user && (

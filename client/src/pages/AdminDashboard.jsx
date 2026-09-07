@@ -4,6 +4,7 @@ import api from "../api/axios.js";
 import { Button } from "@base-ui/react";
 
 const AdminDashboard = () => {
+  const [search, setSearch] = useState("");
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -11,6 +12,18 @@ const AdminDashboard = () => {
   useEffect(()=>{
     window.scrollTo(0,0)
   },[])
+
+  useEffect(() => {
+    const timeout = () => {
+      setLoading(true);
+      api
+        .get("/products", { params: search ? { search } : {} })
+        .then((res) => setProducts(res.data.products))
+        .catch(() => setError("Could not load products right now."))
+        .finally(() => setLoading(false));
+    }
+    return () => clearTimeout(timeout);
+  }, [search]);
 
   const loadProducts = async () => {
     setLoading(true);
@@ -72,12 +85,14 @@ const AdminDashboard = () => {
           </p>
         </div>
 
-        <Link
-          to="/admin/products/new"
-          className="btn-primary"
-        >
-          Add Product
-        </Link>
+        <input
+          type="text"
+          placeholder="Search products..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="input sm:w-72"
+        />
+
       </div>
 
       
