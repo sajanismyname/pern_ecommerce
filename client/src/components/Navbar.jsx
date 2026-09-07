@@ -32,7 +32,15 @@ const Navbar = () => {
             >
               Admin
             </Link>
-          )}
+          ) }
+
+          {!isAdmin && (
+            <p
+              className="hover:text-primary"
+            >
+              User
+            </p>
+          ) }
 
           {/* Profile */}
           {user && (
