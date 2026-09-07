@@ -26,17 +26,16 @@ const Navbar = () => {
 
           {/* Admin */}
           {isAdmin && (
-            <Link
-              to="/admin"
-              className="hover:text-primary"
+            <p
+              className="hover:text-primary font-bold"
             >
               Admin
-            </Link>
+            </p>
           ) }
 
           {!isAdmin && (
             <p
-              className="hover:text-primary"
+              className="hover:text-primary font-bold"
             >
               User
             </p>
