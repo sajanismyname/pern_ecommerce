@@ -33,11 +33,11 @@ const Navbar = () => {
             </p>
           ) }
 
-          {!isAdmin && (
+          {!isAdmin &&  (
             <p
               className="hover:text-primary font-bold"
             >
-              {user.name}
+              {user?.name}
             </p>
           ) }
 
