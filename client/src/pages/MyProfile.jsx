@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { User, Mail, Shield, LogOut, Pencil, Save, X, } from "lucide-react";
 import { Button } from "../components/ui/button";
 import {updateProfileSchema} from "../validation/authSchema";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 const MyProfile = () => {
     const { user, logout, isAdmin, updateUser } = useAuth()
@@ -18,6 +18,10 @@ const MyProfile = () => {
 
     const [error, setError] = useState("")
     const [saving, setSaving] = useState(false)
+
+        useEffect(() => {
+            window.scrollTo(0, 0);
+        }, []);
 
     const handleChange = (field) => (e) => {
         setForm({
