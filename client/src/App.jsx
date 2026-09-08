@@ -1,5 +1,5 @@
 import { Routes, Route } from "react-router-dom";
-import { ProtectedRoute, AdminRoute } from "./components/RouteGuards.jsx";
+import { ProtectedRoute, AdminRoute, GuestRoute } from "./components/RouteGuards.jsx";
 import { useAuth } from "./context/AuthContext.jsx";
 
 import Home from "./pages/Home.jsx";
@@ -17,7 +17,6 @@ import ScrollToTop from "./components/ScrollToTop.jsx";
 import Footer from "./components/Footer.jsx";
 import Navbar from "./components/Navbar.jsx";
 import Sidebar from "./components/Sidebar.jsx";
-import GuestRoute from "./pages/GuestRoute.jsx";
 
 function App() {
   const { user } = useAuth();
@@ -37,99 +36,117 @@ function App() {
 
         
         <main className="min-w-0 flex-1">
-          <Routes>
+
+        <Routes>
+
+          {/* Public routes */}
+          <Route path="/" element={<Home />} />
+
+          <Route path="/products" element={<Home />} />
+
+          <Route
+            path="/products/:id"
+            element={<ProductDetail />}
+          />
 
 
-            <Route path="/" element={<Home />} />
+          {/* Guest-only routes */}
+          <Route
+            path="/login"
+            element={
+              <GuestRoute>
+                <Login />
+              </GuestRoute>
+            }
+          />
 
-            <Route element={<GuestRoute />}>
-              <Route path="/login" element={<Login />} />
-              <Route path="/register" element={<Register />} />
-            </Route>
-
-            <Route path="/products" element={<Home/>} />
-
-            <Route
-              path="/products/:id"
-              element={<ProductDetail />}
-            />
-
-
-            <Route
-              path="/cart"
-              element={
-                <ProtectedRoute>
-                  <Cart />
-                </ProtectedRoute>
-              }
-            />
-
-                        <Route
-              path="/orders"
-              element={
-                <ProtectedRoute>
-                  <Orders />
-                </ProtectedRoute>
-              }
-            />
-
-            <Route
-              path="/profile"
-              element={
-                <ProtectedRoute>
-                  <MyProfile />
-                </ProtectedRoute>
-              }
-            />
-
-            <Route
-              path="/checkout"
-              element={
-                <ProtectedRoute>
-                  <Checkout />
-                </ProtectedRoute>
-              }
-            />
-
-            <Route
-              path="/payment-success"
-              element={
-                <ProtectedRoute>
-                  <PaymentSuccess />
-                </ProtectedRoute>
-              }
-            />
-
-            
-            <Route
-              path="/admin"
-              element={
-                <AdminRoute>
-                  <AdminDashboard />
-                </AdminRoute>
-              }
-            />
+          <Route
+            path="/register"
+            element={
+              <GuestRoute>
+                <Register />
+              </GuestRoute>
+            }
+          />
 
 
-            <Route
-              path="/admin/products/new"
-              element={
-                <AdminRoute>
-                  <AdminProductForm />
-                </AdminRoute>
-              }
-            />
+          {/* User-only routes */}
+          <Route
+            path="/cart"
+            element={
+              <ProtectedRoute>
+                <Cart />
+              </ProtectedRoute>
+            }
+          />
 
-            <Route
-              path="/admin/products/:id/edit"
-              element={
-                <AdminRoute>
-                  <AdminProductForm />
-                </AdminRoute>
-              }
-            />
+          <Route
+            path="/orders"
+            element={
+              <ProtectedRoute>
+                <Orders />
+              </ProtectedRoute>
+            }
+          />
 
-          </Routes>
+          <Route
+            path="/profile"
+            element={
+              <ProtectedRoute>
+                <MyProfile />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/checkout"
+            element={
+              <ProtectedRoute>
+                <Checkout />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/payment-success"
+            element={
+              <ProtectedRoute>
+                <PaymentSuccess />
+              </ProtectedRoute>
+            }
+          />
+
+
+          {/* Admin-only routes */}
+          <Route
+            path="/admin"
+            element={
+              <AdminRoute>
+                <AdminDashboard />
+              </AdminRoute>
+            }
+          />
+
+          <Route
+            path="/admin/products/new"
+            element={
+              <AdminRoute>
+                <AdminProductForm />
+              </AdminRoute>
+            }
+          />
+
+          <Route
+            path="/admin/products/:id/edit"
+            element={
+              <AdminRoute>
+                <AdminProductForm />
+              </AdminRoute>
+            }
+          />
+
+        </Routes>
+
         </main>
 
       </div>
