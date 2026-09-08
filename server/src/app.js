@@ -18,8 +18,10 @@ app.use(
     credentials: true,
   })
 );
-app.use(express.json());
+
+
 app.use(cookieParser());
+app.use(express.json());
 
 app.get("/api/health", (req, res) => res.json({ status: "ok" }));
 
