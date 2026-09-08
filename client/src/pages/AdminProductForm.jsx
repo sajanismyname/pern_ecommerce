@@ -69,7 +69,7 @@ const AdminProductForm = () => {
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
           <label className="label">Name</label>
-          <input required className="input" value={form.name} onChange={handleChange("name")} />
+          <input required="name is required" className="input" value={form.name} onChange={handleChange("name")} />
         </div>
 
         <div>
@@ -89,7 +89,7 @@ const AdminProductForm = () => {
               type="number"
               step="0.01"
               min="0"
-              required
+              required="price is required "
               className="input"
               value={form.price}
               onChange={handleChange("price")}
@@ -100,7 +100,7 @@ const AdminProductForm = () => {
             <input
               type="number"
               min="0"
-              required
+              required="stock is required"
               className="input"
               value={form.stock}
               onChange={handleChange("stock")}

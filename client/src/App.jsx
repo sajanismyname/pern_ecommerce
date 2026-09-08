@@ -17,6 +17,7 @@ import ScrollToTop from "./components/ScrollToTop.jsx";
 import Footer from "./components/Footer.jsx";
 import Navbar from "./components/Navbar.jsx";
 import Sidebar from "./components/Sidebar.jsx";
+import GuestRoute from "./pages/GuestRoute.jsx";
 
 function App() {
   const { user } = useAuth();
@@ -41,9 +42,10 @@ function App() {
 
             <Route path="/" element={<Home />} />
 
-            <Route path="/login" element={<Login />} />
-
-            <Route path="/register" element={<Register />} />
+            <Route element={<GuestRoute />}>
+              <Route path="/login" element={<Login />} />
+              <Route path="/register" element={<Register />} />
+            </Route>
 
             <Route path="/products" element={<Home/>} />
 
