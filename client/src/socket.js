@@ -7,6 +7,13 @@ const socket = io(
         withCredentials: true,
     }
 );
+
+export const updateSocketAuth = (token) => {
+    socket.auth = {
+        token,
+    }
+}
+
     socket.on("connect", () => {
         console.log("🟢 Socket connected:", socket.id);
     });
