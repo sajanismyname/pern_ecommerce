@@ -5,6 +5,7 @@ import {createServer} from "http"
 import {Server} from "socket.io"
 import { initializeDatabase } from "./config/Initialdatabse.js";
 import jwt from "jsonwebtoken"
+import { initializeSocket } from "./socket.js";
 
 dotenv.config();
 
@@ -12,13 +13,7 @@ const PORT = process.env.PORT || 5000;
 
 
 const httpServer = createServer(app);//this creates an http server using express app
-
-const io=new Server(httpServer,{//socket io server
-  cors:{
-    origin:process.env.CLIENT_URL || "http://localhost:5173",
-    credentials:true,
-  }
-})
+const io = initializeSocket(httpServer);
 
 //socket authentication
 io.use((socket, next)=>{

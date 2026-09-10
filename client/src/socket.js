@@ -7,12 +7,20 @@ const socket = io(
         withCredentials: true,
     }
 );
-socket.on("private_message", (data) => {
+    socket.on("connect", () => {
+        console.log("🟢 Socket connected:", socket.id);
+    });
 
-  console.log(
-    "🔒 Private message:",
-    data
-  );
+    socket.on("connect_error", (error) => {
+        console.error("🔴 Socket connection error:", error.message);
+    });
 
-});
+    socket.on("disconnect", (reason) => {
+        console.log("🟡 Socket disconnected:", reason);
+    });
+
+    socket.on("private_message", (data) => {
+        console.log("🔒 Private message:", data);
+    });
+    
 export default socket;
