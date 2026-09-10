@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import api from "../api/axios.js";
+import socket from "../socket.js";
 
 const AuthContext = createContext(null);
 
@@ -15,7 +16,14 @@ export const AuthProvider = ({ children }) => {
     }
     api
       .get("/auth/me")
-      .then((res) => setUser(res.data.user))
+      .then((res) => {
+        setUser(res.data.user)
+        socket.auth = {
+        token: token,
+      };
+
+      socket.connect();
+    })
       .catch(() => localStorage.removeItem("token"))
       .finally(() => setLoading(false));
   }, []);
@@ -26,6 +34,14 @@ const login = async (email, password) => {
   localStorage.setItem("token", res.data.accessToken);
 
   setUser(res.data.user);
+
+   // Give Socket.IO the access token
+  socket.auth = {
+    token: res.data.accessToken,
+  };
+
+  // Connect Socket.IO
+  socket.connect();
 
   return res.data.user;
 };
@@ -41,6 +57,12 @@ const register = async (name, email, password) => {
 
   setUser(res.data.user);
 
+  socket.auth = {
+  token: res.data.accessToken,
+};
+
+  socket.connect();
+
   return res.data.user;
 };
 
@@ -53,6 +75,7 @@ const updateUser = async (data) => {
   };
 
   const logout = () => {
+    socket.disconnect()
     localStorage.removeItem("token");
     setUser(null);
   };
