@@ -2,6 +2,7 @@ import bcrypt from "bcrypt";
 import { pool } from "../config/db.js";
 import { generateToken } from "../utils/generateToken.js";
 import { generateRefreshToken } from "../utils/generateRefreshToken.js";
+import jwt from "jsonwebtoken";
 
 const SALT_ROUNDS = 10;
 
@@ -9,30 +10,78 @@ export const register = async (req, res) => {
   try {
     const { name, email, password } = req.body;
 
-    const existing = await pool.query("SELECT id FROM users WHERE email = $1", [email]);
+    const existing = await pool.query(
+      "SELECT id FROM users WHERE email = $1",
+      [email]
+    );
+
     if (existing.rows.length > 0) {
-      return res.status(409).json({ message: "An account with this email already exists." });
+      return res.status(409).json({
+        message: "An account with this email already exists.",
+      });
     }
 
-    const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
+    const hashedPassword = await bcrypt.hash(
+      password,
+      SALT_ROUNDS
+    );
 
-    const countResult = await pool.query("SELECT COUNT(*)::int AS count FROM users");
-    const role = countResult.rows[0].count === 0 ? "admin" : "user";
+    const countResult = await pool.query(
+      "SELECT COUNT(*)::int AS count FROM users"
+    );
+
+    const role =
+      countResult.rows[0].count === 0
+        ? "admin"
+        : "user";
 
     const result = await pool.query(
       `INSERT INTO users (name, email, password, role)
-      VALUES ($1, $2, $3, $4)
-      RETURNING id, name, email, role, created_at`,
+       VALUES ($1, $2, $3, $4)
+       RETURNING id, name, email, role, created_at`,
       [name, email, hashedPassword, role]
     );
 
     const user = result.rows[0];
-    const token = generateToken(user);
 
-    res.status(201).json({ user, token });
+    // Access token
+    const accessToken = generateToken(user);
+
+    // Refresh token
+    const refreshToken = generateRefreshToken(user);
+
+    // Hash refresh token before storing
+    const refreshTokenHash = await bcrypt.hash(
+      refreshToken,
+      SALT_ROUNDS
+    );
+
+    await pool.query(
+      `INSERT INTO refresh_tokens
+       (user_id, token_hash, expires_at)
+       VALUES ($1, $2, NOW() + INTERVAL '7 days')`,
+      [user.id, refreshTokenHash]
+    );
+
+    // Store refresh token in HTTP-only cookie
+    res.cookie("refreshToken", refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
+
+    res.status(201).json({
+      user,
+      accessToken,
+    });
+
   } catch (err) {
     console.error("Register error:", err);
-    res.status(500).json({ message: "Something went wrong while registering." });
+
+    res.status(500).json({
+      message: "Something went wrong while registering.",
+    });
   }
 };
 

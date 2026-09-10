@@ -1,4 +1,5 @@
     import { pool } from "../config/db.js";
+    import { getIO } from "../socket.js";
 
     export const createOrder = async (req, res) => {
         const client = await pool.connect();
@@ -282,6 +283,15 @@
         customer_name: customer?.customer_name,
         customer_email: customer?.customer_email,
         };
+
+        const io = getIO()
+
+        io.to(`user:${updatedOrder.user_id}`).emit(
+            "order_status_updated",
+            {
+                order: updatedOrder,
+            }
+        )
 
         res.json({
         message: "Order status updated successfully.",

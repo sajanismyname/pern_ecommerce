@@ -1,6 +1,7 @@
     import { useEffect, useState } from "react";
     import api from "../api/axios.js";
     import { useAuth } from "../context/AuthContext.jsx";
+    import socket from "../socket.js";
 
     const Orders = () => {
     const { isAdmin } = useAuth();
@@ -30,9 +31,33 @@
         }
     };
 
-    useEffect(() => {
-        loadOrders();
-    }, [isAdmin]);
+
+useEffect(() => {
+    loadOrders();
+    const handleOrderUpdate = (data) => {
+        console.log("🔔 Real-time order update:", data);
+
+        const updatedOrder = data.order;
+
+        setOrders((prevOrders) =>
+            prevOrders.map((order) =>
+                order.id === updatedOrder.id
+                    ? {
+                        ...order,
+                        ...updatedOrder,
+                    }
+                    : order
+            )
+        );
+    };
+
+    socket.on("order_status_updated", handleOrderUpdate);
+
+    return () => {
+        socket.off("order_status_updated", handleOrderUpdate);
+    };
+
+}, [isAdmin]);
 
     // Update payment or order status
     const updateStatus = async (id, field, value) => {
