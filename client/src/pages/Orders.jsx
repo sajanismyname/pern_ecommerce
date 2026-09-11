@@ -37,8 +37,6 @@
 useEffect(() => {
     loadOrders();
     const handleOrderUpdate = (data) => {
-        console.log("🔔 Real-time order update:", data);
-
         const updatedOrder = data.order;
 
         setOrders((prevOrders) =>
@@ -47,6 +45,7 @@ useEffect(() => {
                     ? {
                         ...order,
                         ...updatedOrder,
+                        items:order.items,
                     }
                     : order
             )
@@ -66,7 +65,7 @@ useEffect(() => {
 }, [isAdmin]);
 
     // Update payment or order status
-    const updateStatus = async (id, field, value) => {
+const updateStatus = async (id, field, value) => {
         setUpdating(id);
         setError("");
 
@@ -78,7 +77,11 @@ useEffect(() => {
         // Update only the changed order in the UI
         setOrders((prev) =>
             prev.map((order) =>
-            order.id === id ? res.data.order : order
+            order.id === id ? {
+                    ...order,
+                    ...res.data.order,
+                    items: order.items,
+                } : order
             )
         );
         } catch (err) {

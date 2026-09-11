@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import api from "../api/axios.js";
 import ProductCard from "../components/ProductCard.jsx";
 import { useAuth } from "@/context/AuthContext.jsx";
+import socket from "../socket.js";
 
 const Home = () => {
   const [products, setProducts] = useState([]);
@@ -22,6 +23,24 @@ const Home = () => {
     }, 300);
     return () => clearTimeout(timeout);
   }, [search]);
+
+  useEffect(() => {
+  const handleProductUpdate = (updatedProduct) => {
+    setProducts((prevProducts) =>
+      prevProducts.map((product) =>
+        product.id === updatedProduct.id
+          ? updatedProduct
+          : product
+      )
+    );
+  };
+
+  socket.on("updated_product", handleProductUpdate);
+
+  return () => {
+    socket.off("updated_product", handleProductUpdate);
+  };
+}, []);
 
   return (
     <div className="mx-auto max-w-6xl px-6 py-10">

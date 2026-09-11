@@ -3,6 +3,7 @@ import { useParams, useNavigate, Link } from "react-router-dom";
 import api from "../api/axios.js";
 import { useAuth } from "../context/AuthContext.jsx";
 import { useCart } from "../context/CartContext.jsx";
+import socket from "../socket.js";
 
 const FALLBACK_IMAGE =
   "https://placehold.co/600x600/F6F7FB/223A6B?text=No+Image";
@@ -21,10 +22,6 @@ const ProductDetail = () => {
 
   useEffect(() => {
       window.scrollTo(0, 0);
-  }, [id]);
-
-
-  useEffect(() => {
     const fetchProduct = async () => {
       try {
         // Get current product
@@ -62,6 +59,30 @@ const ProductDetail = () => {
 
     fetchProduct();
   }, [id]);
+
+useEffect(() => {
+  const handleProductUpdate = (updatedProduct) => {
+    // Update the product currently being viewed
+    if (updatedProduct.id === Number(id)) {
+      setProduct(updatedProduct);
+    }
+
+    // Update the "More Products" cards too
+    setMoreProducts((prev) =>
+      prev.map((item) =>
+        item.id === updatedProduct.id
+          ? updatedProduct
+          : item
+      )
+    );
+  };
+
+  socket.on("updated_product", handleProductUpdate);
+
+  return () => {
+    socket.off("updated_product", handleProductUpdate);
+  };
+}, [id]);
 
   const handleAddToCart = async () => {
     if (!user) return navigate("/login");
