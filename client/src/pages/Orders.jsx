@@ -5,13 +5,15 @@
 
     const Orders = () => {
     const { isAdmin } = useAuth();
-
+    const [notification, setNotification]=useState("")
     const [orders, setOrders] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
     const [updating, setUpdating] = useState(null);
 
     const loadOrders = async () => {
+        console.log("🔥 loadOrders is running");
+
         setLoading(true);
         setError("");
 
@@ -49,6 +51,10 @@ useEffect(() => {
                     : order
             )
         );
+
+        setNotification(
+            `order #${updatedOrder.order_number} is now ${updatedOrder.order_status}`
+        )
     };
 
     socket.on("order_status_updated", handleOrderUpdate);
@@ -108,6 +114,12 @@ useEffect(() => {
             </p>
         )}
 
+        {notification && (
+            <div className="mb-6 rounded-lg border border-border bg-surface px-4 py-3">
+                🔔 {notification}
+            </div>
+        )}
+
 
         {loading ? (
             <p className="text-muted">
@@ -129,6 +141,9 @@ useEffect(() => {
                 <tr>
                     <th className="px-4 py-3 font-medium">
                     Order
+                    </th>
+                    <th className="px-4 py-3 font-medium">
+                        Products
                     </th>
 
                     {isAdmin && (
@@ -162,7 +177,34 @@ useEffect(() => {
 
                     
                     <td className="px-4 py-4 font-medium text-ink">
-                        #{order.id}
+                        #{order.order_number}
+                    </td>
+                    <td className="px-4 py-4">
+                        <div className="space-y-3">
+                                {order.items?.map((item) => (
+                                    <div
+                                        key={item.product_id}
+                                        className="flex items-center gap-3"
+                                    >
+                                        <img
+                                            src={item.image_url}
+                                            alt={item.product_name}
+                                            className="h-12 w-12 rounded-md object-cover"
+                                        />
+
+                                        <div>
+                                            <p className="font-medium text-ink">
+                                                {item.product_name}
+                                            </p>
+
+                                            <p className="text-xs text-muted">
+                                                Qty: {item.quantity} × Rs.
+                                                {Number(item.price).toFixed(2)}
+                                            </p>
+                                        </div>
+                                    </div>
+                                ))}
+                        </div>
                     </td>
 
                     

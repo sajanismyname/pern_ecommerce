@@ -2,7 +2,6 @@ import dotenv from "dotenv";
 import app from "./app.js";
 import { pool } from "./config/db.js";
 import {createServer} from "http"
-import {Server} from "socket.io"
 import { initializeDatabase } from "./config/Initialdatabse.js";
 import jwt from "jsonwebtoken"
 import { initializeSocket } from "./socket.js";

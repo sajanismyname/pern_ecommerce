@@ -1,7 +1,8 @@
     import { pool } from "../config/db.js";
     import { getIO } from "../socket.js";
+    import crypto from "crypto";
 
-    export const createOrder = async (req, res) => {
+export const createOrder = async (req, res) => {
         const client = await pool.connect();
 
         try {
@@ -59,13 +60,19 @@
                 0
             );
 
+            const orderNumber = `ORD-${crypto
+                                .randomBytes(4)
+                                .toString("hex")
+                                .toUpperCase()}`;
+
             const orderResult = await client.query(
                 `INSERT INTO orders
-            (user_id, total, payment_method, payment_status, order_status)
-        VALUES ($1, $2, $3, $4, $5)
-        RETURNING id, user_id, total, payment_method,
+                (order_number, user_id, total, payment_method, payment_status, order_status)
+                VALUES ($1, $2, $3, $4, $5, $6)
+                RETURNING id,order_number, user_id, total, payment_method,
                     payment_status, order_status, created_at`,
                 [
+                    orderNumber,
                     req.user.id,
                     total.toFixed(2),
                     paymentMethod,
@@ -121,70 +128,126 @@
         }
     };
 
+// USER: Get own orders
+export const getMyOrders = async (req, res) => {
+    try {
+        const result = await pool.query(
+            `
+            SELECT
+                o.id,
+                o.order_number,
+                o.total,
+                o.payment_method,
+                o.payment_status,
+                o.order_status,
+                o.created_at,
 
-    // USER: Get own orders
-    export const getMyOrders = async (req, res) => {
-        try {
-            const result = await pool.query(
-                `
-        SELECT
-            o.id,
-            o.total,
-            o.payment_method,
-            o.payment_status,
-            o.order_status,
-            o.created_at
-        FROM orders o
-        WHERE o.user_id = $1
-        ORDER BY o.created_at DESC
-        `,
-                [req.user.id]
-            );
+                COALESCE(
+                    json_agg(
+                        json_build_object(
+                            'product_id', oi.product_id,
+                            'product_name', p.name,
+                            'quantity', oi.quantity,
+                            'price', oi.price,
+                            'image_url', p.image_url
+                        )
+                    ) FILTER (WHERE oi.id IS NOT NULL),
+                    '[]'
+                ) AS items
 
-            res.json({
-                orders: result.rows,
-            });
-        } catch (error) {
-            console.error("GetMyOrders error:", error);
+            FROM orders o
 
-            res.status(500).json({
-                message: "Could not fetch your orders.",
-            });
-        }
-    };
+            LEFT JOIN order_items oi
+                ON oi.order_id = o.id
 
+            LEFT JOIN products p
+                ON p.id = oi.product_id
 
-    // ADMIN: Get all orders
-    export const getAdminOrders = async (req, res) => {
-        try {
-            const result = await pool.query(`
-        SELECT
-            o.id,
-            o.total,
-            o.payment_method,
-            o.payment_status,
-            o.order_status,
-            o.created_at,
-            u.name AS customer_name,
-            u.email AS customer_email
-        FROM orders o
-        JOIN users u ON u.id = o.user_id
-        ORDER BY o.created_at DESC
-        `);
+            WHERE o.user_id = $1
 
-            res.json({
-                orders: result.rows,
-            });
-        } catch (error) {
-            console.error("GetAdminOrders error:", error);
+            GROUP BY o.id
 
-            res.status(500).json({
-                message: "Could not fetch orders.",
-            });
-        }
-    };
+            ORDER BY o.created_at DESC
+            `,
+            [req.user.id]
+        );
 
-    export const updateOrderStatus = async (req, res) => {
+        res.json({
+            orders: result.rows,
+        });
+
+    } catch (error) {
+        console.error("GetMyOrders error:", error);
+
+        res.status(500).json({
+            message: "Could not fetch your orders.",
+        });
+    }
+};
+
+// ADMIN: Get all orders
+// ADMIN: Get all orders
+export const getAdminOrders = async (req, res) => {
+    try {
+        const result = await pool.query(
+            `
+            SELECT
+                o.id,
+                o.order_number,
+                o.user_id,
+                o.total,
+                o.payment_method,
+                o.payment_status,
+                o.order_status,
+                o.created_at,
+
+                u.name AS customer_name,
+                u.email AS customer_email,
+
+                COALESCE(
+                    json_agg(
+                        json_build_object(
+                            'product_id', oi.product_id,
+                            'product_name', p.name,
+                            'quantity', oi.quantity,
+                            'price', oi.price,
+                            'image_url', p.image_url
+                        )
+                    ) FILTER (WHERE oi.id IS NOT NULL),
+                    '[]'
+                ) AS items
+
+            FROM orders o
+
+            JOIN users u
+                ON u.id = o.user_id
+
+            LEFT JOIN order_items oi
+                ON oi.order_id = o.id
+
+            LEFT JOIN products p
+                ON p.id = oi.product_id
+
+            GROUP BY o.id, u.name, u.email
+
+            ORDER BY o.created_at DESC
+            `
+        );
+
+        res.json({
+            orders: result.rows,
+        });
+
+    } catch (error) {
+        console.error("GetAdminOrders error:", error);
+
+        res.status(500).json({
+            message: "Could not fetch orders.",
+        });
+    }
+};
+
+export const updateOrderStatus = async (req, res) => {
     try {
         const { id } = req.params;
         const { payment_status, order_status } = req.body;
@@ -241,6 +304,7 @@
         WHERE id = $3
         RETURNING
             id,
+            order_number,
             user_id,
             total,
             payment_method,
