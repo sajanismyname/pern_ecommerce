@@ -1,116 +1,100 @@
 import dotenv from "dotenv";
 import app from "./app.js";
 import { pool } from "./config/db.js";
-import {createServer} from "http"
+import { createServer } from "http";
 import { initializeDatabase } from "./config/Initialdatabse.js";
-import jwt from "jsonwebtoken"
+import jwt from "jsonwebtoken";
 import { initializeSocket } from "./socket.js";
+import { AppDataSource } from "./config/dataSource.js";
 
 dotenv.config();
 
 const PORT = process.env.PORT || 5000;
 
-
-const httpServer = createServer(app);//this creates an http server using express app
+const httpServer = createServer(app);
 const io = initializeSocket(httpServer);
 
-//socket authentication
-io.use((socket, next)=>{
+// Socket authentication
+io.use((socket, next) => {
   try {
     const token = socket.handshake.auth.token;
 
-    if(!token){
-          return next(
-        new Error("Authentication required")
-      );
+    if (!token) {
+      return next(new Error("Authentication required"));
     }
 
-    const decoded =jwt.verify(
+    const decoded = jwt.verify(
       token,
       process.env.JWT_ACCESS_SECRET
-    )
-
-    socket.user = decoded
-    next()
-  } catch (error) {
-    next(
-      new Error("Invalid authentication token")
     );
+
+    socket.user = decoded;
+    next();
+  } catch (error) {
+    next(new Error("Invalid authentication token"));
   }
-})
+});
 
 io.on("connection", (socket) => {
+  console.log("Authenticated socket:", socket.id);
+  console.log("Authenticated user:", socket.user);
 
-  console.log(
-    "Authenticated socket:",
-    socket.id
-  );
+  const userId = socket.user.id;
 
-  console.log(
-    "Authenticated user:",
-    socket.user
-  );
-
-  const userId = socket.user.id
-  socket.join(`user:${userId}`)
+  socket.join(`user:${userId}`);
 
   console.log(
     `Socket ${socket.id} joined room user:${userId}`
   );
 
-  socket.on("test_private_message",(message)=>{
-
+  socket.on("test_private_message", (message) => {
     io.to(`user:${userId}`).emit(
       "private_message",
       {
-        message: message,
-        userId:userId,
+        message,
+        userId,
       }
-    )
-  })
-
+    );
+  });
 
   socket.on("disconnect", (reason) => {
-
     console.log(
       "User disconnected:",
       socket.user,
       "Reason:",
       reason
     );
-
   });
-
 });
 
 const start = async () => {
-
   try {
-
+    // Existing PostgreSQL connection
     await pool.query("SELECT 1");
+    console.log("PostgreSQL pool connected");
 
+    // Existing database initialization
     await initializeDatabase();
 
+    // New TypeORM connection
+    await AppDataSource.initialize();
+    console.log("TypeORM connected successfully");
 
+    // Start server ONCE
     httpServer.listen(PORT, () => {
-
       console.log(
         `Server running on http://localhost:${PORT}`
       );
-
     });
 
   } catch (err) {
-
     console.error(
-      "Failed to connect to PostgreSQL:",
+      "Failed to start server:",
       err.message
     );
 
     process.exit(1);
-
   }
-
 };
 
 start();

@@ -2,11 +2,12 @@ import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import dotenv from "dotenv";
-
 import authRoutes from "./routes/auth.routes.js";
 import productRoutes from "./routes/product.routes.js";
 import cartRoutes from "./routes/cart.routes.js";
 import orderRoutes from "./routes/order.routes.js"
+import { AppDataSource } from "./config/dataSource.js";
+import { User } from "./entities/user.js";
 
 dotenv.config();
 
@@ -24,6 +25,24 @@ app.use(cookieParser());
 app.use(express.json());
 
 app.get("/api/health", (req, res) => res.json({ status: "ok" }));
+app.get("/api/test-typeorm-user/:id", async (req, res) => {
+  try {
+    const userRepository = AppDataSource.getRepository(User);
+
+    const user = await userRepository.findOne({
+      where: {
+        id: Number(req.params.id),
+      },
+    });
+
+    res.json(user);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({
+      message: "TypeORM test failed",
+    });
+  }
+});
 
 app.use("/api/auth", authRoutes);
 app.use("/api/products", productRoutes);
