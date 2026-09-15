@@ -1,4 +1,5 @@
 import { pool } from "../config/db.js";
+import { getIO } from "../socket.js";
 
 export const getProducts = async (req, res) => {
   try {
@@ -98,14 +99,21 @@ export const updateProduct = async (req, res) => {
 
     const result = await pool.query(
       `UPDATE products SET ${setClauses.join(", ")}
-       WHERE id = $${values.length}
-       RETURNING id, name, description, price, stock, image_url, category, created_at, updated_at`,
+        WHERE id = $${values.length}
+        RETURNING id, name, description, price, stock, image_url, category, created_at, updated_at`,
       values
     );
 
     if (result.rows.length === 0) {
       return res.status(404).json({ message: "Product not found." });
     }
+
+    const updatedProduct = result.rows[0]
+
+    const io = getIO()
+
+    io.emit("updated_product", updatedProduct);
+    
 
     res.json({ product: result.rows[0] });
   } catch (err) {
