@@ -32,6 +32,7 @@ export const Product = new EntitySchema({
         default: 0,
         },
 
+
         image_url: {
         type: "varchar",
         length: 500,
@@ -59,6 +60,15 @@ export const Product = new EntitySchema({
         default: () => "CURRENT_TIMESTAMP",
         },
     },
+
+            checks: [
+        {
+            expression: `"price" >= 0`,
+        },
+        {
+            expression: `"stock" >= 0`,
+        },
+        ],
 
     relations: {
         createdBy: {

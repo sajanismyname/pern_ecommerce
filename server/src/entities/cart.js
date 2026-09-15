@@ -49,4 +49,17 @@ export const CartItem = new EntitySchema({
         onDelete: "CASCADE",
         },
     },
+    
+    uniques: [
+    {
+        columns: ["user_id", "product_id"],
+    },
+    ],
+
+
+    checks: [
+    {
+        expression: `"quantity" > 0`,
+    },
+    ],
 });

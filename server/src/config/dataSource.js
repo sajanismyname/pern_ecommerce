@@ -1,3 +1,4 @@
+import "dotenv/config"
 import "reflect-metadata"
 import { DataSource } from "typeorm"
 import { User } from "../entities/user.js"
@@ -16,7 +17,7 @@ export const AppDataSource = new DataSource({
     database: process.env.PG_DATABASE,
 
     entities: [User, Product, CartItem, Order, OrderItem],
-    migrations: [],
+    migrations: ["src/migrations/*.js"].
 
     synchronize:false,
     logging: false

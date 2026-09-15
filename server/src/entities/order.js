@@ -11,6 +11,13 @@
         generated: true,
         },
 
+        order_number: {
+        type: "varchar",
+        length: 20,
+        unique: true,
+        nullable: true,
+        },
+
         user_id: {
         type: "int",
         },

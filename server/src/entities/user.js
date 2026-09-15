@@ -14,6 +14,11 @@ export const User = new EntitySchema({
         generated: true,
         },
 
+        name: {
+        type: "varchar",
+        length: 100,
+        },
+
         email: {
         type: "varchar",
         length: 150,
@@ -28,6 +33,7 @@ export const User = new EntitySchema({
         role: {
         type: "enum",
         enum: ["user", "admin"],
+        enumName: "user_role",
         default: "user",
         },
 
