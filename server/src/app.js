@@ -8,6 +8,7 @@ import cartRoutes from "./routes/cart.routes.js";
 import orderRoutes from "./routes/order.routes.js"
 import { AppDataSource } from "./config/dataSource.js";
 import { User } from "./entities/user.js";
+import { Product } from "./entities/product.js";
 
 dotenv.config();
 
@@ -25,6 +26,7 @@ app.use(cookieParser());
 app.use(express.json());
 
 app.get("/api/health", (req, res) => res.json({ status: "ok" }));
+
 app.get("/api/test-typeorm-user/:id", async (req, res) => {
   try {
     const userRepository = AppDataSource.getRepository(User);
@@ -34,8 +36,25 @@ app.get("/api/test-typeorm-user/:id", async (req, res) => {
         id: Number(req.params.id),
       },
     });
-
     res.json(user);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({
+      message: "TypeORM test failed",
+    });
+  }
+});
+
+app.get("/api/test-typeorm-product/:id", async (req, res) => {
+  try {
+    const productRepository = AppDataSource.getRepository(Product);
+
+    const product = await productRepository.findOne({
+      where: {
+        id: Number(req.params.id),
+      },
+    });
+    res.json(product);
   } catch (error) {
     console.error(error);
     res.status(500).json({
