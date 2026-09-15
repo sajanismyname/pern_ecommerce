@@ -17,7 +17,7 @@ export const AppDataSource = new DataSource({
     database: process.env.PG_DATABASE,
 
     entities: [User, Product, CartItem, Order, OrderItem],
-    migrations: ["src/migrations/*.js"].
+    migrations: ["src/migrations/*.js"],
 
     synchronize:false,
     logging: false
