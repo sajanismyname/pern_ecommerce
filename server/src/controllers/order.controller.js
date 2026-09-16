@@ -1,427 +1,417 @@
-    import { pool } from "../config/db.js";
-    import { getIO } from "../socket.js";
-    import crypto from "crypto";
+import { AppDataSource } from "../config/dataSource.js";
+import { getIO } from "../socket.js";
+import crypto from "crypto";
+
+import { Order } from "../entities/order.js";
+import { OrderItem } from "../entities/orderItem.js";
+import { CartItem } from "../entities/cart.js";
+import { Product } from "../entities/product.js";
 
 export const createOrder = async (req, res) => {
-        const client = await pool.connect();
+    const queryRunner = AppDataSource.createQueryRunner();
 
-        try {
-            const { paymentMethod } = req.body;
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
 
-            const allowedMethods = [
-                "Dummy eSewa",
-                "Dummy Khalti",
-                "Cash on Delivery",
-            ];
+    try {
+        const { paymentMethod } = req.body;
 
-            if (!allowedMethods.includes(paymentMethod)) {
-                return res.status(400).json({
-                    message: "Invalid payment method.",
-                });
-            }
+        const allowedMethods = [
+        "Dummy eSewa",
+        "Dummy Khalti",
+        "Cash on Delivery",
+        ];
 
-            await client.query("BEGIN");
+        if (!allowedMethods.includes(paymentMethod)) {
+        await queryRunner.rollbackTransaction();
 
-            const cartResult = await client.query(
-                `SELECT
-            ci.product_id,
-            ci.quantity,
-            p.name,
-            p.price,
-            p.stock
-        FROM cart_items ci
-        JOIN products p ON p.id = ci.product_id
-        WHERE ci.user_id = $1`,
-                [req.user.id]
-            );
-
-            if (cartResult.rows.length === 0) {
-                await client.query("ROLLBACK");
-
-                return res.status(400).json({
-                    message: "Your cart is empty.",
-                });
-            }
-
-            const items = cartResult.rows;
-
-            for (const item of items) {
-                if (item.quantity > item.stock) {
-                    await client.query("ROLLBACK");
-
-                    return res.status(400).json({
-                        message: `${item.name} does not have enough stock.`,
-                    });
-                }
-            }
-
-            const total = items.reduce(
-                (sum, item) => sum + Number(item.price) * item.quantity,
-                0
-            );
-
-            const orderNumber = `ORD-${crypto
-                                .randomBytes(4)
-                                .toString("hex")
-                                .toUpperCase()}`;
-
-            const orderResult = await client.query(
-                `INSERT INTO orders
-                (order_number, user_id, total, payment_method, payment_status, order_status)
-                VALUES ($1, $2, $3, $4, $5, $6)
-                RETURNING id,order_number, user_id, total, payment_method,
-                    payment_status, order_status, created_at`,
-                [
-                    orderNumber,
-                    req.user.id,
-                    total.toFixed(2),
-                    paymentMethod,
-                    paymentMethod === "Cash on Delivery" ? "pending" : "paid",
-                    "pending",
-                ]
-            );
-
-            const order = orderResult.rows[0];
-
-            for (const item of items) {
-                await client.query(
-                    `INSERT INTO order_items
-            (order_id, product_id, quantity, price)
-            VALUES ($1, $2, $3, $4)`,
-                    [
-                        order.id,
-                        item.product_id,
-                        item.quantity,
-                        item.price,
-                    ]
-                );
-
-                await client.query(
-                    `UPDATE products
-            SET stock = stock - $1
-            WHERE id = $2`,
-                    [item.quantity, item.product_id]
-                );
-            }
-
-            await client.query(
-                "DELETE FROM cart_items WHERE user_id = $1",
-                [req.user.id]
-            );
-
-            await client.query("COMMIT");
-
-            const io = getIO();
-
-            for (const item of items) {
-                const productResult = await pool.query(
-                    `
-                    SELECT
-                        id,
-                        name,
-                        description,
-                        price,
-                        stock,
-                        image_url,
-                        category,
-                        created_at
-                    FROM products
-                    WHERE id = $1
-                    `,
-                    [item.product_id]
-                );
-
-                if (productResult.rows.length > 0) {
-                    io.emit("updated_product", productResult.rows[0]);
-                }
-            }
-
-            res.status(201).json({
-                message: "Order created successfully.",
-                order,
-            });
-        } catch (error) {
-            await client.query("ROLLBACK");
-
-            console.error("CreateOrder error:", error);
-
-            res.status(500).json({
-                message: "Could not create order.",
-            });
-        } finally {
-            client.release();
+        return res.status(400).json({
+            message: "Invalid payment method.",
+        });
         }
+
+        // Get user's cart
+        const items = await queryRunner.manager.find(CartItem, {
+        where: {
+            user: {
+            id: req.user.id,
+            },
+        },
+        relations: {
+            product: true,
+        },
+        });
+
+        if (items.length === 0) {
+        await queryRunner.rollbackTransaction();
+
+        return res.status(400).json({
+            message: "Your cart is empty.",
+        });
+        }
+
+        // Check stock
+        for (const item of items) {
+        if (item.quantity > item.product.stock) {
+            await queryRunner.rollbackTransaction();
+
+            return res.status(400).json({
+            message: `${item.product.name} does not have enough stock.`,
+            });
+        }
+        }
+
+        // Calculate total
+        const total = items.reduce(
+        (sum, item) =>
+            sum + Number(item.product.price) * item.quantity,
+        0
+        );
+
+        // Generate order number
+        const orderNumber = `ORD-${crypto
+        .randomBytes(4)
+        .toString("hex")
+        .toUpperCase()}`;
+
+        // Create Order entity
+        const order = queryRunner.manager.create(Order, {
+        order_number: orderNumber,
+
+        user: {
+            id: req.user.id,
+        },
+
+        total: total.toFixed(2),
+
+        payment_method: paymentMethod,
+
+        payment_status:
+            paymentMethod === "Cash on Delivery"
+            ? "pending"
+            : "paid",
+
+        order_status: "pending",
+        });
+
+        // Save order
+        const savedOrder = await queryRunner.manager.save(Order, order);
+
+        // Create order items + reduce stock
+        for (const item of items) {
+        const orderItem = queryRunner.manager.create(OrderItem, {
+            order: {
+            id: savedOrder.id,
+            },
+
+            product: {
+            id: item.product.id,
+            },
+
+            quantity: item.quantity,
+
+            price: item.product.price,
+        });
+
+        await queryRunner.manager.save(OrderItem, orderItem);
+
+        // Reduce product stock
+        item.product.stock -= item.quantity;
+
+        await queryRunner.manager.save(Product, item.product);
+        }
+
+        // Clear cart
+        await queryRunner.manager.delete(CartItem, {
+        user: {
+            id: req.user.id,
+        },
+        });
+
+        // Commit transaction
+        await queryRunner.commitTransaction();
+
+        // Socket.IO
+        const io = getIO();
+
+        for (const item of items) {
+        const updatedProduct = await productRepository.findOne({
+            where: {
+            id: item.product.id,
+            },
+        });
+
+        if (updatedProduct) {
+            io.emit("updated_product", updatedProduct);
+        }
+        }
+
+        res.status(201).json({
+        message: "Order created successfully.",
+        order: savedOrder,
+        });
+
+    } catch (error) {
+        await queryRunner.rollbackTransaction();
+
+        console.error("CreateOrder error:", error);
+
+        res.status(500).json({
+        message: "Could not create order.",
+        });
+
+    } finally {
+        await queryRunner.release();
+    }
 };
 
 // USER: Get own orders
 export const getMyOrders = async (req, res) => {
     try {
-        const result = await pool.query(
-            `
-            SELECT
-                o.id,
-                o.order_number,
-                o.total,
-                o.payment_method,
-                o.payment_status,
-                o.order_status,
-                o.created_at,
+        const orders = await orderRepository.find({
+        where: {
+            user: {
+            id: req.user.id,
+            },
+        },
 
-                COALESCE(
-                    json_agg(
-                        json_build_object(
-                            'product_id', oi.product_id,
-                            'product_name', p.name,
-                            'quantity', oi.quantity,
-                            'price', oi.price,
-                            'image_url', p.image_url
-                        )
-                    ) FILTER (WHERE oi.id IS NOT NULL),
-                    '[]'
-                ) AS items
+        relations: {
+            items: {
+            product: true,
+            },
+        },
 
-            FROM orders o
+        order: {
+            created_at: "DESC",
+        },
+        });
 
-            LEFT JOIN order_items oi
-                ON oi.order_id = o.id
+        const formattedOrders = orders.map((order) => ({
+        id: order.id,
+        order_number: order.order_number,
+        total: order.total,
+        payment_method: order.payment_method,
+        payment_status: order.payment_status,
+        order_status: order.order_status,
+        created_at: order.created_at,
 
-            LEFT JOIN products p
-                ON p.id = oi.product_id
-
-            WHERE o.user_id = $1
-
-            GROUP BY o.id
-
-            ORDER BY o.created_at DESC
-            `,
-            [req.user.id]
-        );
+        items: order.items.map((item) => ({
+            product_id: item.product.id,
+            product_name: item.product.name,
+            quantity: item.quantity,
+            price: item.price,
+            image_url: item.product.image_url,
+        })),
+        }));
 
         res.json({
-            orders: result.rows,
+        orders: formattedOrders,
         });
 
     } catch (error) {
         console.error("GetMyOrders error:", error);
 
         res.status(500).json({
-            message: "Could not fetch your orders.",
+        message: "Could not fetch your orders.",
         });
     }
 };
 
 // ADMIN: Get all orders
-// ADMIN: Get all orders
 export const getAdminOrders = async (req, res) => {
     try {
-        const result = await pool.query(
-            `
-            SELECT
-                o.id,
-                o.order_number,
-                o.user_id,
-                o.total,
-                o.payment_method,
-                o.payment_status,
-                o.order_status,
-                o.created_at,
+        const orders = await orderRepository.find({
+        relations: {
+            user: true,
 
-                u.name AS customer_name,
-                u.email AS customer_email,
+            items: {
+            product: true,
+            },
+        },
 
-                COALESCE(
-                    json_agg(
-                        json_build_object(
-                            'product_id', oi.product_id,
-                            'product_name', p.name,
-                            'quantity', oi.quantity,
-                            'price', oi.price,
-                            'image_url', p.image_url
-                        )
-                    ) FILTER (WHERE oi.id IS NOT NULL),
-                    '[]'
-                ) AS items
+        order: {
+            created_at: "DESC",
+        },
+        });
 
-            FROM orders o
+        const formattedOrders = orders.map((order) => ({
+        id: order.id,
+        order_number: order.order_number,
+        user_id: order.user.id,
+        total: order.total,
+        payment_method: order.payment_method,
+        payment_status: order.payment_status,
+        order_status: order.order_status,
+        created_at: order.created_at,
 
-            JOIN users u
-                ON u.id = o.user_id
+        customer_name: order.user.name,
+        customer_email: order.user.email,
 
-            LEFT JOIN order_items oi
-                ON oi.order_id = o.id
-
-            LEFT JOIN products p
-                ON p.id = oi.product_id
-
-            GROUP BY o.id, u.name, u.email
-
-            ORDER BY o.created_at DESC
-            `
-        );
+        items: order.items.map((item) => ({
+            product_id: item.product.id,
+            product_name: item.product.name,
+            quantity: item.quantity,
+            price: item.price,
+            image_url: item.product.image_url,
+        })),
+        }));
 
         res.json({
-            orders: result.rows,
+        orders: formattedOrders,
         });
 
     } catch (error) {
         console.error("GetAdminOrders error:", error);
 
         res.status(500).json({
-            message: "Could not fetch orders.",
+        message: "Could not fetch orders.",
         });
     }
 };
 
 export const updateOrderStatus = async (req, res) => {
-    const client = await pool.connect();
+    const queryRunner = AppDataSource.createQueryRunner();
+
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
 
     try {
         const { id } = req.params;
         const { payment_status, order_status } = req.body;
 
+        // -----------------------------------------
+        // VALIDATE REQUEST
+        // -----------------------------------------
+
         if (
-            payment_status === undefined &&
-            order_status === undefined
+        payment_status === undefined &&
+        order_status === undefined
         ) {
-            return res.status(400).json({
-                message: "Payment status or order status is required.",
-            });
+        await queryRunner.rollbackTransaction();
+
+        return res.status(400).json({
+            message: "Payment status or order status is required.",
+        });
         }
 
         const allowedPaymentStatuses = [
-            "pending",
-            "paid",
-            "failed",
-            "refunded",
+        "pending",
+        "paid",
+        "failed",
+        "refunded",
         ];
 
         if (
-            payment_status !== undefined &&
-            !allowedPaymentStatuses.includes(payment_status)
+        payment_status !== undefined &&
+        !allowedPaymentStatuses.includes(payment_status)
         ) {
-            return res.status(400).json({
-                message: "Invalid payment status.",
-            });
+        await queryRunner.rollbackTransaction();
+
+        return res.status(400).json({
+            message: "Invalid payment status.",
+        });
         }
 
         const allowedOrderStatuses = [
-            "pending",
-            "processing",
-            "shipped",
-            "delivered",
-            "cancelled",
+        "pending",
+        "processing",
+        "shipped",
+        "delivered",
+        "cancelled",
         ];
 
         if (
-            order_status !== undefined &&
-            !allowedOrderStatuses.includes(order_status)
+        order_status !== undefined &&
+        !allowedOrderStatuses.includes(order_status)
         ) {
-            return res.status(400).json({
-                message: "Invalid order status.",
-            });
+        await queryRunner.rollbackTransaction();
+
+        return res.status(400).json({
+            message: "Invalid order status.",
+        });
         }
 
-        await client.query("BEGIN");
+        // -----------------------------------------
+        // GET CURRENT ORDER
+        // -----------------------------------------
 
-        // Get the current order status first
-        const currentOrderResult = await client.query(
-            `
-            SELECT
-                id,
-                order_number,
-                user_id,
-                total,
-                payment_method,
-                payment_status,
-                order_status,
-                created_at
-            FROM orders
-            WHERE id = $1
-            FOR UPDATE
-            `,
-            [id]
-        );
+        const currentOrder = await queryRunner.manager.findOne(Order, {
+        where: {
+            id: Number(id),
+        },
 
-        if (currentOrderResult.rows.length === 0) {
-            await client.query("ROLLBACK");
+        relations: {
+            user: true,
+        },
+        });
 
-            return res.status(404).json({
-                message: "Order not found.",
-            });
+        if (!currentOrder) {
+        await queryRunner.rollbackTransaction();
+
+        return res.status(404).json({
+            message: "Order not found.",
+        });
         }
-
-        const currentOrder = currentOrderResult.rows[0];
 
         const oldOrderStatus = currentOrder.order_status;
+
         const newOrderStatus =
-            order_status ?? oldOrderStatus;
+        order_status ?? oldOrderStatus;
 
         // -----------------------------------------
         // CANCEL ORDER → RESTORE STOCK
         // -----------------------------------------
 
         if (
-            newOrderStatus === "cancelled" &&
-            oldOrderStatus !== "cancelled"
+        newOrderStatus === "cancelled" &&
+        oldOrderStatus !== "cancelled"
         ) {
-            const itemsResult = await client.query(
-                `
-                SELECT
-                    product_id,
-                    quantity
-                FROM order_items
-                WHERE order_id = $1
-                `,
-                [id]
-            );
+        const items = await queryRunner.manager.find(OrderItem, {
+            where: {
+            order: {
+                id: Number(id),
+            },
+            },
 
-            for (const item of itemsResult.rows) {
-                await client.query(
-                    `
-                    UPDATE products
-                    SET stock = stock + $1,
-                        updated_at = NOW()
-                    WHERE id = $2
-                    `,
-                    [
-                        item.quantity,
-                        item.product_id,
-                    ]
-                );
-            }
+            relations: {
+            product: true,
+            },
+        });
+
+        for (const item of items) {
+            item.product.stock += item.quantity;
+
+            item.product.updated_at = new Date();
+
+            await queryRunner.manager.save(
+            Product,
+            item.product
+            );
+        }
         }
 
         // -----------------------------------------
         // UPDATE ORDER
         // -----------------------------------------
 
-        const result = await client.query(
-            `
-            UPDATE orders
-            SET
-                payment_status = COALESCE($1, payment_status),
-                order_status = COALESCE($2, order_status)
-            WHERE id = $3
-            RETURNING
-                id,
-                order_number,
-                user_id,
-                total,
-                payment_method,
-                payment_status,
-                order_status,
-                created_at
-            `,
-            [
-                payment_status ?? null,
-                order_status ?? null,
-                id,
-            ]
+        if (payment_status !== undefined) {
+        currentOrder.payment_status = payment_status;
+        }
+
+        if (order_status !== undefined) {
+        currentOrder.order_status = order_status;
+        }
+
+        const updatedOrder = await queryRunner.manager.save(
+        Order,
+        currentOrder
         );
 
-        const updatedOrder = result.rows[0];
+        // -----------------------------------------
+        // COMMIT TRANSACTION
+        // -----------------------------------------
 
-        await client.query("COMMIT");
+        await queryRunner.commitTransaction();
 
         // -----------------------------------------
         // SOCKET.IO
@@ -429,91 +419,87 @@ export const updateOrderStatus = async (req, res) => {
 
         const io = getIO();
 
-        // Notify the customer
-        io.to(`user:${updatedOrder.user_id}`).emit(
-            "order_status_updated",
-            {
-                order: updatedOrder,
-            }
+        // Notify customer
+        io.to(`user:${updatedOrder.user.id}`).emit(
+        "order_status_updated",
+        {
+            order: updatedOrder,
+        }
         );
 
-        // If order was cancelled,
-        // send updated product stock to everyone
+        // -----------------------------------------
+        // SEND UPDATED PRODUCT STOCK
+        // -----------------------------------------
+
         if (
-            newOrderStatus === "cancelled" &&
-            oldOrderStatus !== "cancelled"
+        newOrderStatus === "cancelled" &&
+        oldOrderStatus !== "cancelled"
         ) {
-            const itemsResult = await pool.query(
-                `
-                SELECT DISTINCT product_id
-                FROM order_items
-                WHERE order_id = $1
-                `,
-                [id]
+        const items = await orderItemRepository.find({
+            where: {
+            order: {
+                id: Number(id),
+            },
+            },
+
+            relations: {
+            product: true,
+            },
+        });
+
+        for (const item of items) {
+            const updatedProduct =
+            await productRepository.findOne({
+                where: {
+                id: item.product.id,
+                },
+            });
+
+            if (updatedProduct) {
+            io.emit(
+                "updated_product",
+                updatedProduct
             );
-
-            for (const item of itemsResult.rows) {
-                const productResult = await pool.query(
-                    `
-                    SELECT
-                        id,
-                        name,
-                        description,
-                        price,
-                        stock,
-                        image_url,
-                        category,
-                        created_at,
-                        updated_at
-                    FROM products
-                    WHERE id = $1
-                    `,
-                    [item.product_id]
-                );
-
-                if (productResult.rows.length > 0) {
-                    io.emit(
-                        "updated_product",
-                        productResult.rows[0]
-                    );
-                }
             }
         }
+        }
 
-        // Get customer information
-        const customerResult = await pool.query(
-            `
-            SELECT
-                name AS customer_name,
-                email AS customer_email
-            FROM users
-            WHERE id = $1
-            `,
-            [updatedOrder.user_id]
-        );
-
-        const customer = customerResult.rows[0];
+        // -----------------------------------------
+        // RESPONSE
+        // -----------------------------------------
 
         const order = {
-            ...updatedOrder,
-            customer_name: customer?.customer_name,
-            customer_email: customer?.customer_email,
+        id: updatedOrder.id,
+        order_number: updatedOrder.order_number,
+        user_id: updatedOrder.user.id,
+        total: updatedOrder.total,
+        payment_method: updatedOrder.payment_method,
+        payment_status: updatedOrder.payment_status,
+        order_status: updatedOrder.order_status,
+        created_at: updatedOrder.created_at,
+
+        customer_name: updatedOrder.user.name,
+        customer_email: updatedOrder.user.email,
         };
 
         res.json({
-            message: "Order status updated successfully.",
-            order,
+        message: "Order status updated successfully.",
+        order,
         });
 
     } catch (error) {
-        await client.query("ROLLBACK");
+        await queryRunner.rollbackTransaction();
 
-        console.error("UpdateOrderStatus error:", error);
+        console.error(
+        "UpdateOrderStatus error:",
+        error
+        );
 
         res.status(500).json({
-            message: "Could not update order status.",
+        message: "Could not update order status.",
         });
+
     } finally {
-        client.release();
+        await queryRunner.release();
     }
 };

@@ -1,67 +1,80 @@
 import bcrypt from "bcrypt";
-import { pool } from "../config/db.js";
+import jwt from "jsonwebtoken";
+import { AppDataSource } from "../config/dataSource.js";
+import { User } from "../entities/user.js";
+import { RefreshToken } from "../entities/refreshToken.js";
 import { generateToken } from "../utils/generateToken.js";
 import { generateRefreshToken } from "../utils/generateRefreshToken.js";
-import jwt from "jsonwebtoken";
 
 const SALT_ROUNDS = 10;
 
+
+// ==================== REGISTER ====================
+
 export const register = async (req, res) => {
-  try {
+      try {
     const { name, email, password } = req.body;
 
-    const existing = await pool.query(
-      "SELECT id FROM users WHERE email = $1",
-      [email]
-    );
+    const userRepository = AppDataSource.getRepository(User);
+    const refreshTokenRepository =
+      AppDataSource.getRepository(RefreshToken);
 
-    if (existing.rows.length > 0) {
+    // Check if user already exists
+    const existingUser = await userRepository.findOne({
+      where: { email },
+    });
+
+    if (existingUser) {
       return res.status(409).json({
         message: "An account with this email already exists.",
       });
     }
 
+    // Hash password
     const hashedPassword = await bcrypt.hash(
       password,
       SALT_ROUNDS
     );
 
-    const countResult = await pool.query(
-      "SELECT COUNT(*)::int AS count FROM users"
-    );
+    // Check whether this is the first user
+    const userCount = await userRepository.count();
 
-    const role =
-      countResult.rows[0].count === 0
-        ? "admin"
-        : "user";
+    const role = userCount === 0 ? "admin" : "user";
 
-    const result = await pool.query(
-      `INSERT INTO users (name, email, password, role)
-       VALUES ($1, $2, $3, $4)
-       RETURNING id, name, email, role, created_at`,
-      [name, email, hashedPassword, role]
-    );
+    // Create user
+    const user = userRepository.create({
+      name,
+      email,
+      password: hashedPassword,
+      role,
+    });
 
-    const user = result.rows[0];
+    // Save user
+    const savedUser = await userRepository.save(user);
 
-    // Access token
-    const accessToken = generateToken(user);
+    // Remove password
+    const { password: _omit, ...safeUser } = savedUser;
 
-    // Refresh token
-    const refreshToken = generateRefreshToken(user);
+    // Generate tokens
+    const accessToken = generateToken(safeUser);
+    const refreshToken = generateRefreshToken(safeUser);
 
-    // Hash refresh token before storing
+    // Hash refresh token
     const refreshTokenHash = await bcrypt.hash(
       refreshToken,
       SALT_ROUNDS
     );
 
-    await pool.query(
-      `INSERT INTO refresh_tokens
-       (user_id, token_hash, expires_at)
-       VALUES ($1, $2, NOW() + INTERVAL '7 days')`,
-      [user.id, refreshTokenHash]
-    );
+    // Create refresh token record
+    const refreshTokenEntity = refreshTokenRepository.create({
+      user_id: safeUser.id,
+      token_hash: refreshTokenHash,
+      expires_at: new Date(
+        Date.now() + 7 * 24 * 60 * 60 * 1000
+      ),
+    });
+
+    await refreshTokenRepository.save(refreshTokenEntity);
 
     // Store refresh token in HTTP-only cookie
     res.cookie("refreshToken", refreshToken, {
@@ -72,12 +85,12 @@ export const register = async (req, res) => {
     });
 
     res.status(201).json({
-      user,
+      user: safeUser,
       accessToken,
     });
 
-  } catch (err) {
-    console.error("Register error:", err);
+  } catch (error) {
+    console.error("Register error:", error);
 
     res.status(500).json({
       message: "Something went wrong while registering.",
@@ -85,43 +98,65 @@ export const register = async (req, res) => {
   }
 };
 
+
+// ==================== LOGIN ====================
+
 export const login = async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    const result = await pool.query(
-      "SELECT id, name, email, password, role FROM users WHERE email = $1",
-      [email]
-    );
-    const userRow = result.rows[0];
+    const userRepository = AppDataSource.getRepository(User);
+    const refreshTokenRepository =
+      AppDataSource.getRepository(RefreshToken);
+
+    // Find user
+    const userRow = await userRepository.findOne({
+      where: { email },
+    });
 
     if (!userRow) {
-      return res.status(401).json({ message: "Invalid email or password." });
+      return res.status(401).json({
+        message: "Invalid email or password.",
+      });
     }
 
-    const passwordMatches = await bcrypt.compare(password, userRow.password);
+    // Verify password
+    const passwordMatches = await bcrypt.compare(
+      password,
+      userRow.password
+    );
+
     if (!passwordMatches) {
-      return res.status(401).json({ message: "Invalid email or password." });
+      return res.status(401).json({
+        message: "Invalid email or password.",
+      });
     }
 
+    // Remove password
     const { password: _omit, ...user } = userRow;
 
+    // Generate tokens
     const accessToken = generateToken(user);
-
     const refreshToken = generateRefreshToken(user);
 
+    // Hash refresh token
     const refreshTokenHash = await bcrypt.hash(
       refreshToken,
       SALT_ROUNDS
     );
 
-    await pool.query(
-      `INSERT INTO refresh_tokens
-        (user_id, token_hash, expires_at)
-        VALUES ($1, $2, NOW() + INTERVAL '7 days')`,
-      [user.id, refreshTokenHash]
-    );
+    // Create refresh token record
+    const refreshTokenEntity = refreshTokenRepository.create({
+      user_id: user.id,
+      token_hash: refreshTokenHash,
+      expires_at: new Date(
+        Date.now() + 7 * 24 * 60 * 60 * 1000
+      ),
+    });
 
+    await refreshTokenRepository.save(refreshTokenEntity);
+
+    // Store refresh token in cookie
     res.cookie("refreshToken", refreshToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
@@ -133,178 +168,235 @@ export const login = async (req, res) => {
       user,
       accessToken,
     });
-  } catch (err) {
-    console.error("Login error:", err);
-    res.status(500).json({ message: "Something went wrong while logging in." });
+
+  } catch (error) {
+    console.error("Login error:", error);
+
+    res.status(500).json({
+      message: "Something went wrong while logging in.",
+    });
   }
 };
+
+
+// ==================== GET ME ====================
 
 export const getMe = async (req, res) => {
   try {
-    const result = await pool.query(
-      "SELECT id, name, email, role, created_at FROM users WHERE id = $1",
-      [req.user.id]
-    );
-    if (result.rows.length === 0) {
-      return res.status(404).json({ message: "User not found." });
+    const userRepository = AppDataSource.getRepository(User);
+
+    const user = await userRepository.findOne({
+      where: {
+        id: req.user.id,
+      },
+    });
+
+    if (!user) {
+      return res.status(404).json({
+        message: "User not found.",
+      });
     }
-    res.json({ user: result.rows[0] });
-  } catch (err) {
-    console.error("GetMe error:", err);
-    res.status(500).json({ message: "Something went wrong." });
+
+    const { password, ...safeUser } = user;
+
+    res.json({
+      user: safeUser,
+    });
+
+  } catch (error) {
+    console.error("GetMe error:", error);
+
+    res.status(500).json({
+      message: "Something went wrong.",
+    });
   }
 };
 
+
+// ==================== UPDATE PROFILE ====================
+
 export const updateProfile = async (req, res) => {
   try {
-    const { name, email } = req.body
-    const result = await pool.query(
-      `UPDATE users 
-      SET name =$1, email=$2 
-      WHERE id = $3
-      RETURNING name, email, id ,role, created_at`,
-      [name, email, req.user.id]
-    )
+    const { name, email } = req.body;
 
-    if (result.rows.length === 0) {
-      return res.status(404).json({ message: "User not found." });
+    const userRepository = AppDataSource.getRepository(User);
+
+    const user = await userRepository.findOne({
+      where: {
+        id: req.user.id,
+      },
+    });
+
+    if (!user) {
+      return res.status(404).json({
+        message: "User not found.",
+      });
     }
 
+    user.name = name;
+    user.email = email;
 
-    res.json({ user: result.rows[0] })
+    const updatedUser = await userRepository.save(user);
+
+    const { password, ...safeUser } = updatedUser;
+
+    res.json({
+      user: safeUser,
+    });
+
   } catch (error) {
-    console.error(error)
-    res.status(500).json({ message: "Something went wrong" })
+    console.error("Update profile error:", error);
+
+    res.status(500).json({
+      message: "Something went wrong.",
+    });
   }
-}
+};
+
+
+// ==================== REFRESH ACCESS TOKEN ====================
 
 export const refreshAccessToken = async (req, res) => {
-    try {
-      const refreshToken = req.cookies.refreshToken;
+  try {
+    const refreshToken = req.cookies.refreshToken;
 
-      if (!refreshToken) {
-        return res.status(401).json({
-          message: "Refresh token required.",
-        });
-      }
+    if (!refreshToken) {
+      return res.status(401).json({
+        message: "Refresh token required.",
+      });
+    }
 
-      const decoded = jwt.verify(
-        refreshToken,
-        process.env.JWT_REFRESH_SECRET
-      );
+    // Verify JWT
+    const decoded = jwt.verify(
+      refreshToken,
+      process.env.JWT_REFRESH_SECRET
+    );
 
-      const result = await pool.query(
-        `SELECT id, token_hash
-        FROM refresh_tokens
-        WHERE user_id = $1
-        AND expires_at > NOW()`,
-        [decoded.id]
-      );
+    const refreshTokenRepository =
+      AppDataSource.getRepository(RefreshToken);
 
-      let storedToken = null;
+    const userRepository =
+      AppDataSource.getRepository(User);
 
-      for (const row of result.rows) {
-        const matches = await bcrypt.compare(
+    // Find all valid refresh tokens for this user
+    const storedTokens = await refreshTokenRepository.find({
+      where: {
+        user_id: decoded.id,
+      },
+    });
+
+    let storedToken = null;
+
+    // Compare actual token against stored hashes
+    for (const row of storedTokens) {
+      if (
+        row.expires_at > new Date() &&
+        await bcrypt.compare(
           refreshToken,
           row.token_hash
-        );
-
-        if (matches) {
-          storedToken = row;
-          break;
-        }
+        )
+      ) {
+        storedToken = row;
+        break;
       }
+    }
 
-      if (!storedToken) {
-        return res.status(401).json({
-          message: "Invalid refresh token.",
-        });
-      }
+    if (!storedToken) {
+      return res.status(401).json({
+        message: "Invalid refresh token.",
+      });
+    }
 
-      // Remove old refresh token
-      await pool.query(
-        `DELETE FROM refresh_tokens
-        WHERE id = $1`,
-        [storedToken.id]
-      );
+    // Delete old refresh token
+    await refreshTokenRepository.delete(
+      storedToken.id
+    );
 
-      // Get user
-      const userResult = await pool.query(
-        `SELECT id, name, email, role, created_at
-        FROM users
-        WHERE id = $1`,
-        [decoded.id]
-      );
+    // Get user
+    const user = await userRepository.findOne({
+      where: {
+        id: decoded.id,
+      },
+    });
 
-      if (userResult.rows.length === 0) {
-        return res.status(404).json({
-          message: "User not found.",
-        });
-      }
+    if (!user) {
+      return res.status(404).json({
+        message: "User not found.",
+      });
+    }
 
-      const user = userResult.rows[0];
+    const { password, ...safeUser } = user;
 
-      // Generate new access token
-      const accessToken = generateToken(user);
+    // Generate new tokens
+    const accessToken = generateToken(safeUser);
+    const newRefreshToken =
+      generateRefreshToken(safeUser);
 
-      // Generate new refresh token
-      const newRefreshToken = generateRefreshToken(user);
-
-      // Hash new refresh token
-      const newRefreshTokenHash = await bcrypt.hash(
+    // Hash new refresh token
+    const newRefreshTokenHash =
+      await bcrypt.hash(
         newRefreshToken,
         SALT_ROUNDS
       );
 
-      // Store new refresh token
-      await pool.query(
-        `INSERT INTO refresh_tokens
-        (user_id, token_hash, expires_at)
-        VALUES ($1, $2, NOW() + INTERVAL '7 days')`,
-        [user.id, newRefreshTokenHash]
-      );
-
-      // Replace cookie
-      res.cookie("refreshToken", newRefreshToken, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: "strict",
-        maxAge: 7 * 24 * 60 * 60 * 1000,
+    // Store new refresh token
+    const newRefreshTokenEntity =
+      refreshTokenRepository.create({
+        user_id: safeUser.id,
+        token_hash: newRefreshTokenHash,
+        expires_at: new Date(
+          Date.now() + 7 * 24 * 60 * 60 * 1000
+        ),
       });
 
-      return res.json({
-        accessToken,
-      });
-    } catch (error) {
-      console.error("Refresh token error:", error);
+    await refreshTokenRepository.save(
+      newRefreshTokenEntity
+    );
 
-      return res.status(401).json({
-        message: "Invalid or expired refresh token.",
-      });
-    }
+    // Replace cookie
+    res.cookie("refreshToken", newRefreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
+
+    res.json({
+      accessToken,
+    });
+
+  } catch (error) {
+    console.error("Refresh token error:", error);
+
+    res.status(401).json({
+      message: "Invalid or expired refresh token.",
+    });
+  }
 };
+
+
+// ==================== LOGOUT ====================
 
 export const logout = async (req, res) => {
   try {
     const refreshToken = req.cookies.refreshToken;
 
     if (refreshToken) {
-      const result = await pool.query(
-        `SELECT id, token_hash
-        FROM refresh_tokens`
-      );
+      const refreshTokenRepository =
+        AppDataSource.getRepository(RefreshToken);
 
-      for (const row of result.rows) {
+      const storedTokens =
+        await refreshTokenRepository.find();
+
+      for (const row of storedTokens) {
         const matches = await bcrypt.compare(
           refreshToken,
           row.token_hash
         );
 
         if (matches) {
-          await pool.query(
-            `DELETE FROM refresh_tokens
-            WHERE id = $1`,
-            [row.id]
+          await refreshTokenRepository.delete(
+            row.id
           );
 
           break;
@@ -321,6 +413,7 @@ export const logout = async (req, res) => {
     res.json({
       message: "Logged out successfully.",
     });
+
   } catch (error) {
     console.error("Logout error:", error);
 

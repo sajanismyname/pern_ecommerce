@@ -41,5 +41,11 @@ export const User = new EntitySchema({
         type: "timestamp",
         default: () => "CURRENT_TIMESTAMP",
         },
+
+        phone: {
+        type: "varchar",
+        length: 20,
+        nullable: true,
+    },
     },
 })
