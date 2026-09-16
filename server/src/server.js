@@ -2,7 +2,6 @@ import dotenv from "dotenv";
 import app from "./app.js";
 import { pool } from "./config/db.js";
 import { createServer } from "http";
-import { initializeDatabase } from "./config/Initialdatabse.js";
 import jwt from "jsonwebtoken";
 import { initializeSocket } from "./socket.js";
 import { AppDataSource } from "./config/dataSource.js";
@@ -72,9 +71,6 @@ const start = async () => {
     // Existing PostgreSQL connection
     await pool.query("SELECT 1");
     console.log("PostgreSQL pool connected");
-
-    // Existing database initialization
-    await initializeDatabase();
 
     // New TypeORM connection
     await AppDataSource.initialize();

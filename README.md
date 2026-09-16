@@ -1,28 +1,28 @@
-React component → Axios → Express route → Middleware → Controller → PostgreSQL → Controller response → React state → UI.
+Auth Controller
+├── register        → Repository
+├── login           → Repository
+├── getMe           → Repository
+├── updateProfile   → Repository
+├── refreshToken    → Repository
+└── logout          → Repository
 
-//create order
-Checkout.jsx
-     ↓
-Axios POST /orders
-     ↓
-order.routes.js
-     ↓
-verifyToken
-     ↓
-createOrder()
-     ↓
-PostgreSQL
-     ↓
-Create order
-     ↓
-Create order_items
-     ↓
-Reduce stock
-     ↓
-Clear cart
-     ↓
-COMMIT
-     ↓
-Response
-     ↓
-React updates UI
+Product Controller
+├── getProducts     → Repository / query conditions
+├── getById         → Repository
+├── createProduct   → Repository
+├── updateProduct   → Repository
+└── deleteProduct   → Repository
+
+Cart Controller
+├── getCart         → Repository + relations
+├── addToCart       → Repository
+├── updateCartItem  → Repository
+└── removeCartItem  → Repository
+
+Order Controller
+├── createOrder         → Repository + QueryRunner transaction
+├── getMyOrders        → Repository + relations
+├── getAdminOrders     → Repository + relations
+└── updateOrderStatus  → Repository + QueryRunner + QueryBuilder
+                         ↑
+                    pessimistic lock
