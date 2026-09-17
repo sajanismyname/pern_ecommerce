@@ -6,6 +6,7 @@ import { Product } from "../entities/product.js";
 import {CartItem} from "../entities/cart.js"
 import {Order} from "../entities/order.js"
 import {OrderItem} from "../entities/orderItem.js"
+import { RefreshToken } from "../entities/refreshToken.js";
 
 export const AppDataSource = new DataSource({
     type:"postgres",
@@ -16,7 +17,7 @@ export const AppDataSource = new DataSource({
     password: process.env.PG_PASSWORD,
     database: process.env.PG_DATABASE,
 
-    entities: [User, Product, CartItem, Order, OrderItem],
+    entities: [User, Product, CartItem, Order, OrderItem, RefreshToken],
     migrations: ["src/migrations/*.js"],
 
     synchronize:false,

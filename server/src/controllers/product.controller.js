@@ -1,7 +1,6 @@
 import { AppDataSource } from "../config/dataSource.js";
 import { Product } from "../entities/product.js";
 import { getIO } from "../socket.js";
-import { getIO } from "../socket.js";
 
 export const getProducts = async (req, res) => {
   try {
